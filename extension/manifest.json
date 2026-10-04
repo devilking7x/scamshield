@@ -1,0 +1,1 @@
+{"action":{"default_icon":{"128":"icons/icon-128.png"},"default_title":"ScamShield"},"background":{"service_worker":"background.js"},"description":"Select suspicious text on any page, right-click, and check it with ScamShield.","icons":{"128":"icons/icon-128.png"},"manifest_version":3,"name":"ScamShield — Check selected text","permissions":["contextMenus"],"version":"1.0.0"}

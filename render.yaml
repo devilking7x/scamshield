@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: scamshield
+    runtime: node
+    repo: https://github.com/devilking7x/scamshield
+    branch: main
+    plan: free
+    region: singapore
+    buildCommand: npm run install:all && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
