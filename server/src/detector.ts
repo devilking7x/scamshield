@@ -136,7 +136,7 @@ const RULES: Rule[] = [
   {
     code: 'money_request', weight: 15,
     patterns: [
-      /(send|transfer).{0,25}(money|amount|rs\.?|₹|inr|rupees|lakh|पैसे)/i,
+      /(send|transfer|pay).{0,25}(money|amount|rs\.?|₹|inr|rupees|lakh|crore|पैसे|\d{4,})/i,
       /collect\s*request/i, /pay\s*(a\s*)?(fee|charge|advance|deposit)/i,
       /(scan|scan\s*the)\s*(qr|code)/i, /पैसे\s*भेजें/i, /रुपये\s*भेजें/i,
       /एडवांस\s*(पेमेंट|भुगतान)/i, /upi\s*(id|collect)/i,
@@ -200,7 +200,7 @@ const RULES: Rule[] = [
     detailHi: 'असली नियोक्ता कभी रजिस्ट्रेशन या "वेरिफिकेशन" फीस नहीं माँगते। डिपॉज़िट माँगने वाले work-from-home ऑफर ठगी हैं।',
   },
   {
-    code: 'crypto_double', weight: 25,
+    code: 'crypto_double', weight: 30,
     patterns: [
       /double\s*(your|the)\s*(bitcoin|\bbtc\b|\beth\b|ethereum|crypto)/i,
       /(crypto|bitcoin|\bbtc\b|ethereum|\beth\b).{0,30}(double|giveaway|free|2x)/i,
