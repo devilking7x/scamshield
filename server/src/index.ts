@@ -13,6 +13,14 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '64kb' }));
 
+// Basic security headers.
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 // Simple in-memory rate limiter: 60 requests/min per IP on API routes.
 const rateMap = new Map<string, { count: number; reset: number }>();
 app.use('/api/', (req, res, next) => {

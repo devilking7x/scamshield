@@ -217,6 +217,20 @@ try {
   r = await post('/api/analyze-url', { url: 'ftp://example.com' });
   ok('ftp URL: rejected 400', r.status === 400, `status=${r.status}`);
 
+
+  // 28. JUDGE R4: UPI collect request scam -> dangerous
+  r = await post('/api/analyze-text', {
+    text: 'You have received a collect request of Rs 10000 from RAJA. Approve to receive money in your account.',
+    lang: 'en',
+  });
+  ok('UPI collect scam: dangerous', r.json.riskLevel === 'dangerous', `score=${r.json.score} level=${r.json.riskLevel}`);
+  ok('UPI collect: upi_collect flag', r.json.redFlags?.some(f => f.code === 'upi_collect'));
+
+  // 29. JUDGE R4: security headers present
+  const hres = await fetch(BASE + '/api/health');
+  ok('security: X-Content-Type-Options', hres.headers.get('x-content-type-options') === 'nosniff');
+  ok('security: X-Frame-Options', hres.headers.get('x-frame-options') === 'DENY');
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exitCode = fail ? 1 : 0;
 } finally {

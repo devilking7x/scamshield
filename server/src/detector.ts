@@ -110,6 +110,28 @@ const RULES: Rule[] = [
     detailHi: 'ठग बैंक कर्मचारी, RBI, पुलिस या KYC अधिकारी बनते हैं। हमेशा आधिकारिक ऐप/वेबसाइट से जाँचें — मैसेज में दिए नंबर पर कभी भरोसा न करें।',
   },
   {
+    code: 'upi_collect', weight: 30,
+    patterns: [
+      /collect\s*request/i, /approve.{0,40}(collect|request)/i,
+      /कलेक्ट\s*रिक्वेस्ट/i,
+    ],
+    labelEn: 'UPI collect request — approving SENDS money',
+    labelHi: 'UPI collect request — approve करने से पैसे जाते हैं',
+    detailEn: 'A UPI "collect request" ASKS YOU for money. Approving it sends money FROM your account — it never receives money. Scammers lie that approving will credit you.',
+    detailHi: 'UPI "collect request" आपसे पैसे माँगता है। इसे approve करने से आपके खाते से पैसे जाते हैं — कभी आते नहीं। ठग झूठ बोलते हैं कि approve करने से पैसे आएँगे।',
+  },
+  {
+    code: 'upi_deception', weight: 30,
+    patterns: [
+      /approve.{0,30}to\s*receive/i, /(receive|get).{0,20}money.{0,30}(approve|accept)/i,
+      /approve\s*करने\s*से.{0,20}पैसे\s*(आएँगे|मिलेंगे)/i,
+    ],
+    labelEn: '"Approve to receive money" — the classic UPI lie',
+    labelHi: '"पैसे पाने के लिए approve करें" — क्लासिक UPI झूठ',
+    detailEn: 'This is the exact lie used in UPI fraud: approving a collect request NEVER credits money — it always debits. If you did not expect this request, decline and block the sender.',
+    detailHi: 'यह UPI ठगी में इस्तेमाल होने वाला exact झूठ है: collect request approve करने से कभी पैसे नहीं आते — हमेशा कटते हैं। अगर यह request अप्रत्याशित है, तो decline करें और भेजने वाले को ब्लॉक करें।',
+  },
+  {
     code: 'money_request', weight: 15,
     patterns: [
       /(send|transfer).{0,25}(money|amount|rs\.?|₹|inr|rupees|lakh|पैसे)/i,
