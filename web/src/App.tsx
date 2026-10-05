@@ -196,6 +196,7 @@ export default function App() {
   const [ocrState, setOcrState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrText, setOcrText] = useState('');
+  const [ocrHindi, setOcrHindi] = useState(false);
 
   useEffect(() => {
     getPatterns().then((d) => setPatterns(d.patterns)).catch(() => {});
@@ -257,7 +258,9 @@ export default function App() {
     if (!imgFile) return;
     setOcrState('working'); setOcrProgress(0); setError('');
     try {
-      const worker = await createWorker(['eng', 'hin'], 1, {
+      // English loads fast (~4s); Hindi traineddata is large, opt-in only.
+      const langs = ocrHindi ? ['eng', 'hin'] : ['eng'];
+      const worker = await createWorker(langs, 1, {
         logger: (m: { status: string; progress: number }) => {
           if (m.status === 'recognizing text') setOcrProgress(Math.round(m.progress * 100));
         },
@@ -402,9 +405,14 @@ export default function App() {
               ) : (
                 <div>
                   <img src={imgPreview} alt="upload preview" className="max-h-56 rounded-xl border border-gold/30 mx-auto" />
-                  <div className="flex flex-wrap justify-center gap-2 mt-3">
+                  <div className="flex flex-wrap justify-center items-center gap-2 mt-3">
                     <button onClick={() => { setImgFile(null); setImgPreview(null); setOcrState('idle'); setOcrText(''); }}
                       className="px-4 py-2 rounded-lg border border-gold/40 text-gold text-sm font-bold">🔄 {s.ocrChange}</button>
+                    <label className="flex items-center gap-1.5 text-sm text-stone-300 cursor-pointer">
+                      <input type="checkbox" checked={ocrHindi} onChange={(e) => setOcrHindi(e.target.checked)}
+                        className="w-4 h-4 accent-yellow-500" />
+                      {lang === 'hi' ? 'हिंदी भी पढ़ें' : 'Also read Hindi'}
+                    </label>
                     <button onClick={runOcr} disabled={ocrState === 'working'}
                       className="px-4 py-2 rounded-lg bg-gold text-black text-sm font-bold disabled:opacity-50">
                       {ocrState === 'working' ? `${s.ocrWorking} ${ocrProgress}%` : `👁️ ${s.ocrExtract}`}
