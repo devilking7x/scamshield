@@ -4,7 +4,7 @@
 //
 // 1) Deploy the web app (see ../render.yaml), then set your URL below.
 // 2) Load this folder as an unpacked extension (see README.md).
-const SCAMSHIELD_URL = 'https://scamshield.onrender.com'; // <-- change to your deployed URL
+const SCAMSHIELD_URL = 'https://scamshield-jyfk.onrender.com';
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({

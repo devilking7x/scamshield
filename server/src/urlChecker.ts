@@ -201,7 +201,9 @@ const CHECKS: Check[] = [
 
 export function analyzeUrl(raw: string, lang: Lang = 'en'): UrlVerdict {
   let input = raw.trim().slice(0, 2000);
-  if (!/^https?:\/\//i.test(input)) input = 'https://' + input;
+  // Only prepend https:// when no scheme is present at all.
+  // (Prepending to "ftp://x" would mangle it into "https://ftp//x".)
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(input)) input = 'https://' + input;
 
   let u: URL;
   try {

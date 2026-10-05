@@ -298,13 +298,30 @@ const ACTIONS: Record<RiskLevel, { en: string[]; hi: string[] }> = {
 
 /** Stage 1 — Extractor: find which rules match the text. */
 export function matchRules(rawText: string): Rule[] {
-  const matched = RULES.filter((rule) => rule.patterns.some((re) => re.test(rawText)));
+  // Normalize Unicode homoglyphs (Cyrillic/Greek lookalikes) so scammers
+  // can't evade detection with "ассоunt" (Cyrillic а) instead of "account".
+  const text = normalizeHomoglyphs(rawText);
+  const matched = RULES.filter((rule) => rule.patterns.some((re) => re.test(text)));
   // A message that ASKS for the OTP can never be a genuine OTP delivery,
   // even if it parrots "do not share" to sound legitimate (scammers do this).
-  if (OTP_REQUEST.test(rawText)) {
+  if (OTP_REQUEST.test(text)) {
     return matched.filter((r) => r.code !== 'legit_otp');
   }
   return matched;
+}
+
+// Cyrillic + Greek characters that look identical to Latin letters.
+const HOMOGLYPHS: Record<string, string> = {
+  'а': 'a', 'с': 'c', 'е': 'e', 'і': 'i', 'ј': 'j', 'о': 'o', 'р': 'p',
+  'ѕ': 's', 'х': 'x', 'у': 'y', 'ԛ': 'q', 'һ': 'h', 'ո': 'n', 'ԝ': 'w',
+  'А': 'A', 'В': 'B', 'С': 'C', 'Е': 'E', 'Н': 'H', 'І': 'I', 'Ј': 'J',
+  'К': 'K', 'М': 'M', 'О': 'O', 'Р': 'P', 'Ѕ': 'S', 'Т': 'T', 'Х': 'X',
+  'Ү': 'Y', 'Ζ': 'Z', 'α': 'a', 'ο': 'o', 'ρ': 'p', 'τ': 't', 'υ': 'u',
+  'χ': 'x', 'κ': 'k', 'ν': 'v', 'η': 'n', 'μ': 'm', 'Ο': 'O',
+};
+
+export function normalizeHomoglyphs(s: string): string {
+  return s.normalize('NFKC').replace(/[а-яА-ЯёЁα-ωΑ-Ω]/g, (c) => HOMOGLYPHS[c] ?? c);
 }
 
 // Active solicitation of the OTP — disqualifies the legit_otp trust signal.

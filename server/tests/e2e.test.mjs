@@ -205,6 +205,18 @@ try {
   });
   ok('benign win: safe', r.json.riskLevel === 'safe', `score=${r.json.score} level=${r.json.riskLevel}`);
 
+
+  // 26. JUDGE R3: Cyrillic homoglyph evasion -> detected
+  r = await post('/api/analyze-text', {
+    text: 'Your \u0430\u0441\u0441ount blocked. Share \u041eTP now.',
+    lang: 'en',
+  });
+  ok('homoglyph evasion: detected', r.json.score > 0 && r.json.redFlags?.some(f => f.code === 'otp_secret'), `score=${r.json.score}`);
+
+  // 27. JUDGE R3: ftp:// URL rejected (not mangled to safe)
+  r = await post('/api/analyze-url', { url: 'ftp://example.com' });
+  ok('ftp URL: rejected 400', r.status === 400, `status=${r.status}`);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exitCode = fail ? 1 : 0;
 } finally {
