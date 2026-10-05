@@ -2,7 +2,7 @@
  * The scam pattern library (/api/scam-patterns) is cached at runtime so the
  * library page keeps working offline. Analysis endpoints always go to network.
  */
-const CACHE = 'scamshield-v1';
+const CACHE = 'scamshield-v2';
 const PRECACHE = ['./', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -23,7 +23,10 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  // Only handle same-origin http(s) requests. Blob:/data: URLs (used by
+  // Tesseract.js web workers) must bypass the SW — caches.match() rejects them.
   if (url.origin !== self.location.origin) return;
+  if (!url.protocol.startsWith('http')) return;
 
   // Analysis endpoints: network only (always fresh)
   if (url.pathname.startsWith('/api/analyze')) {
