@@ -2,6 +2,12 @@
 
 **Built for ForgeHacks Online 2026 · AI + Cybersecurity track**
 
+## 🔴 Live Demo
+
+**👉 https://scamshield-jyfk.onrender.com**
+
+Try it now — paste any suspicious message, check a link, or upload a scam screenshot.
+
 ## Problem
 
 India loses thousands of crores to digital fraud every year — UPI collect-request scams, OTP theft, fake KYC messages, "digital arrest" video-call extortion, job-fee frauds, and lottery scams. The victims are disproportionately non-English speakers who receive these attacks as SMS/WhatsApp messages on their phones. Existing advice ("be careful") doesn't help in the moment of panic. **ScamShield** is a free, mobile-first tool that checks a suspicious message or link *right now*, explains the danger in plain English or Hindi, and tells the victim exactly what to do next — including the national cyber helpline **1930** and the reporting portal **cybercrime.gov.in**.
@@ -12,7 +18,7 @@ India loses thousands of crores to digital fraud every year — UPI collect-requ
 |---|---------|--------------|
 | 1 | **Message analyzer** (RECOGNIZE) | Paste suspicious SMS/WhatsApp/email text → scam risk score 0–100, red flags with plain-language explanations, EN + HI |
 | 2 | **Link checker** (VERIFY) | Paste a URL → 10 phishing heuristics (typosquatting, punycode, IP hosts, shorteners, suspicious TLDs, brand embedding, `@` trick…) → verdict + reasons |
-| 3 | **Screenshot → OCR** (multimodal) | Upload a scam screenshot → on-device Tesseract OCR (English + Hindi) extracts the text → feeds the analyzer. Nothing is uploaded |
+| 3 | **Screenshot → OCR** (multimodal) | Upload a scam screenshot → server-side Tesseract OCR (English + Hindi) extracts the text in ~2s → feeds the analyzer. Images are processed, never stored |
 | 4 | **Similar-scam matching** | TF-IDF + cosine similarity against 16 known scam templates → "this looks like a Digital arrest threat (82% match)" |
 | 5 | **Scam pattern library** (PREVENT) | 6 India-specific scam cards (UPI collect, OTP, fake KYC, job fee, digital arrest, lottery) — how to spot + what to do, bilingual |
 | 6 | **Action guide** (RESPOND) | Step-by-step: stop contact → call 1930 → report at cybercrime.gov.in → alert bank → warn others |
