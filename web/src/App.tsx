@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { createWorker } from 'tesseract.js';
 import type { Lang } from './i18n';
 import { STR } from './i18n';
 import { analyzeText, analyzeUrl, getPatterns } from './api';
@@ -196,7 +195,6 @@ export default function App() {
   const [ocrState, setOcrState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrText, setOcrText] = useState('');
-  const [ocrHindi, setOcrHindi] = useState(false);
 
   useEffect(() => {
     getPatterns().then((d) => setPatterns(d.patterns)).catch(() => {});
@@ -254,20 +252,31 @@ export default function App() {
     reader.readAsDataURL(f);
   };
 
+  // OCR runs on the SERVER (fast, warm worker) — client just uploads the image.
   const runOcr = async () => {
     if (!imgFile) return;
     setOcrState('working'); setOcrProgress(0); setError('');
     try {
-      // English loads fast (~4s); Hindi traineddata is large, opt-in only.
-      const langs = ocrHindi ? ['eng', 'hin'] : ['eng'];
-      const worker = await createWorker(langs, 1, {
-        logger: (m: { status: string; progress: number }) => {
-          if (m.status === 'recognizing text') setOcrProgress(Math.round(m.progress * 100));
-        },
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = reject;
+        r.readAsDataURL(imgFile);
       });
-      const { data } = await worker.recognize(imgFile);
-      await worker.terminate();
-      const extracted = (data.text || '').trim();
+      // Fake smooth progress while the server works.
+      const tick = window.setInterval(() => {
+        setOcrProgress((p) => (p < 90 ? p + Math.max(1, Math.round((90 - p) / 8)) : p));
+      }, 300);
+      const res = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      window.clearInterval(tick);
+      if (!res.ok) throw new Error(`ocr-${res.status}`);
+      const { text } = (await res.json()) as { text: string };
+      const extracted = (text || '').trim();
+      setOcrProgress(100);
       setOcrText(extracted);
       setOcrState(extracted ? 'done' : 'error');
     } catch {
@@ -408,11 +417,6 @@ export default function App() {
                   <div className="flex flex-wrap justify-center items-center gap-2 mt-3">
                     <button onClick={() => { setImgFile(null); setImgPreview(null); setOcrState('idle'); setOcrText(''); }}
                       className="px-4 py-2 rounded-lg border border-gold/40 text-gold text-sm font-bold">🔄 {s.ocrChange}</button>
-                    <label className="flex items-center gap-1.5 text-sm text-stone-300 cursor-pointer">
-                      <input type="checkbox" checked={ocrHindi} onChange={(e) => setOcrHindi(e.target.checked)}
-                        className="w-4 h-4 accent-yellow-500" />
-                      {lang === 'hi' ? 'हिंदी भी पढ़ें' : 'Also read Hindi'}
-                    </label>
                     <button onClick={runOcr} disabled={ocrState === 'working'}
                       className="px-4 py-2 rounded-lg bg-gold text-black text-sm font-bold disabled:opacity-50">
                       {ocrState === 'working' ? `${s.ocrWorking} ${ocrProgress}%` : `👁️ ${s.ocrExtract}`}

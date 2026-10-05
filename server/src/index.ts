@@ -6,6 +6,7 @@ import { type Lang } from './detector.js';
 import { runTextPipeline } from './pipeline.js';
 import { analyzeUrl } from './urlChecker.js';
 import { SCAM_PATTERNS } from './patterns.js';
+import { ocrImage } from './ocr.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -77,6 +78,26 @@ app.post('/api/analyze-url', (req, res) => {
     const msg = e instanceof Error ? e.message : 'URL check failed';
     const status = /valid URL|http\/https/i.test(msg) ? 400 : 500;
     res.status(status).json({ error: msg });
+  }
+});
+
+// POST /api/ocr — { image: "data:image/png;base64,..." } — server-side OCR
+// Body limit raised for this route (screenshots can be a few MB).
+app.post('/api/ocr', express.json({ limit: '8mb' }), async (req, res) => {
+  try {
+    const raw = String(req.body?.image ?? '');
+    const m = raw.match(/^data:image\/[a-z+]+;base64,(.+)$/);
+    if (!m) {
+      return res.status(400).json({ error: 'No image provided (expected data URL)' });
+    }
+    const buf = Buffer.from(m[1], 'base64');
+    if (buf.length > 6 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Image too large (max 6MB)' });
+    }
+    const text = await ocrImage(buf);
+    res.json({ text });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'OCR failed' });
   }
 });
 
