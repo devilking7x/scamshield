@@ -231,6 +231,21 @@ try {
   ok('security: X-Content-Type-Options', hres.headers.get('x-content-type-options') === 'nosniff');
   ok('security: X-Frame-Options', hres.headers.get('x-frame-options') === 'DENY');
 
+
+  // 30. JUDGE R5: reworded OTP ("one time password", "a/c") -> suspicious+
+  r = await post('/api/analyze-text', {
+    text: 'Hello dear, your bank a/c is getting closed soon. Kindly tell us the one time password received on phone for KYC updation.',
+    lang: 'en',
+  });
+  ok('reworded OTP: suspicious+', ['suspicious','dangerous'].includes(r.json.riskLevel), `score=${r.json.score} level=${r.json.riskLevel}`);
+
+  // 31. JUDGE R5: crypto doubling scam -> suspicious+
+  r = await post('/api/analyze-text', {
+    text: 'Double your Bitcoin in 24 hours! Guaranteed returns. Send 0.01 BTC to this wallet now and get 0.02 back.',
+    lang: 'en',
+  });
+  ok('crypto doubling: suspicious+', ['suspicious','dangerous'].includes(r.json.riskLevel), `score=${r.json.score} level=${r.json.riskLevel}`);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exitCode = fail ? 1 : 0;
 } finally {

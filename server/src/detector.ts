@@ -72,9 +72,11 @@ const RULES: Rule[] = [
   {
     code: 'otp_secret', weight: 30,
     patterns: [
-      /\botp\b/i, /ओटीपी/, /\bcvv\b/i, /upi\s*pin/i, /\bpin\b.*(share|bata|bhejo|bhej|enter|daal)/i,
-      /(share|send|batao|bhejo|bhej\s*dijiye|बताएं|भेजें).{0,30}\botp\b/i,
+      /\botp\b/i, /one[\s-]*time[\s-]*password/i, /ओटीपी/, /\bcvv\b/i, /upi\s*pin/i,
+      /\bpin\b.*(share|bata|bhejo|bhej|enter|daal)/i,
+      /(share|send|batao|bhejo|bhej\s*dijiye|बताएं|भेजें|tell\s*us).{0,30}\botp\b/i,
       /\botp\b.{0,30}(share|send|batao|bhejo|बताएं|भेजें)/i,
+      /(tell|give|provide).{0,30}(one[\s-]*time[\s-]*password|\botp\b)/i,
       /वन[-\s]?टाइम\s*पासवर्ड/i, /(enter|daalein|डालें).{0,30}\botp\b/i,
     ],
     labelEn: 'Asks for OTP / PIN / CVV',
@@ -198,12 +200,24 @@ const RULES: Rule[] = [
     detailHi: 'असली नियोक्ता कभी रजिस्ट्रेशन या "वेरिफिकेशन" फीस नहीं माँगते। डिपॉज़िट माँगने वाले work-from-home ऑफर ठगी हैं।',
   },
   {
+    code: 'crypto_double', weight: 25,
+    patterns: [
+      /double\s*(your|the)\s*(bitcoin|\bbtc\b|\beth\b|ethereum|crypto)/i,
+      /(crypto|bitcoin|\bbtc\b|ethereum|\beth\b).{0,30}(double|giveaway|free|2x)/i,
+      /send.{0,30}(btc|bitcoin|eth).{0,30}(get|receive|back|double)/i,
+    ],
+    labelEn: 'Crypto doubling scam',
+    labelHi: 'क्रिप्टो दोगुना करने की ठगी',
+    detailEn: '"Send crypto, get double back" is always a scam — no exchange or trader doubles deposits. Once sent, crypto cannot be recovered.',
+    detailHi: '"क्रिप्टो भेजो, दोगुना पाओ" हमेशा ठगी है — कोई एक्सचेंज जमा दोगुना नहीं करता। एक बार भेजने पर क्रिप्टो वापस नहीं मिलता।',
+  },
+  {
     code: 'too_good', weight: 12,
     patterns: [
-      /double\s*(your|the)\s*money/i, /guaranteed\s*returns/i,
+      /double\s*(your|the)\s*(money|investment|amount)/i,
+      /guaranteed\s*returns/i,
       /investment.{0,30}(double|triple|10x)/i, /risk[\s-]*free\s*(profit|returns|investment)/i,
       /घर\s*बैठे\s*कमाएं/i, /दोगुना\s*पैसा/i,
-      /crypto.{0,30}(double|giveaway|free)/i,
     ],
     labelEn: 'Too-good-to-be-true returns',
     labelHi: 'अविश्वसनीय मुनाफे का लालच',
@@ -322,7 +336,8 @@ const ACTIONS: Record<RiskLevel, { en: string[]; hi: string[] }> = {
 export function matchRules(rawText: string): Rule[] {
   // Normalize Unicode homoglyphs (Cyrillic/Greek lookalikes) so scammers
   // can't evade detection with "ассоunt" (Cyrillic а) instead of "account".
-  const text = normalizeHomoglyphs(rawText);
+  // Also expand Indian-English abbreviations ("a/c" -> "account").
+  const text = normalizeAbbreviations(normalizeHomoglyphs(rawText));
   const matched = RULES.filter((rule) => rule.patterns.some((re) => re.test(text)));
   // A message that ASKS for the OTP can never be a genuine OTP delivery,
   // even if it parrots "do not share" to sound legitimate (scammers do this).
@@ -344,6 +359,14 @@ const HOMOGLYPHS: Record<string, string> = {
 
 export function normalizeHomoglyphs(s: string): string {
   return s.normalize('NFKC').replace(/[а-яА-ЯёЁα-ωΑ-Ω]/g, (c) => HOMOGLYPHS[c] ?? c);
+}
+
+/** Normalize common Indian-English abbreviations scammers use to dodge filters. */
+export function normalizeAbbreviations(s: string): string {
+  return s
+    .replace(/\ba\/c\b/gi, 'account')
+    .replace(/\bw\/o\b/gi, 'without')
+    .replace(/\bupdation\b/gi, 'update');
 }
 
 // Active solicitation of the OTP — disqualifies the legit_otp trust signal.
