@@ -183,6 +183,28 @@ try {
   r = await post('/api/analyze-url', { url: 'https://www.hdfcbank.com' });
   ok('legit URL: still safe', r.json.verdict === 'safe', `score=${r.json.score}`);
 
+
+  // 23. JUDGE R2: parcel/customs scam with shortener -> suspicious+
+  r = await post('/api/analyze-text', {
+    text: 'Hello sir, I am calling from the delivery company. There is a small customs charge of 50 rupees to release your parcel. Please pay here: bit.ly/xyz123',
+    lang: 'en',
+  });
+  ok('parcel scam: suspicious+', ['suspicious','dangerous'].includes(r.json.riskLevel), `score=${r.json.score} level=${r.json.riskLevel}`);
+
+  // 24. JUDGE R2: KBC lottery win -> suspicious+ (not safe)
+  r = await post('/api/analyze-text', {
+    text: 'CONGRATULATIONS YOU HAVE WON 10 LAKH RUPEES IN KBC LOTTERY CALL NOW',
+    lang: 'en',
+  });
+  ok('KBC lottery: suspicious+', ['suspicious','dangerous'].includes(r.json.riskLevel), `score=${r.json.score} level=${r.json.riskLevel}`);
+
+  // 25. JUDGE R2: benign "won the match" stays safe (no false positive)
+  r = await post('/api/analyze-text', {
+    text: 'Congratulations! You won the cricket match yesterday. Well played!',
+    lang: 'en',
+  });
+  ok('benign win: safe', r.json.riskLevel === 'safe', `score=${r.json.score} level=${r.json.riskLevel}`);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exitCode = fail ? 1 : 0;
 } finally {

@@ -201,6 +201,27 @@ const RULES: Rule[] = [
     detailHi: 'SMS पर गिरफ्तारी या SIM बंद करने की धमकी दबाव बनाने का तरीका है। असली नोटिस आधिकारिक लेटरहेड पर आते हैं, रैंडम SMS पर नहीं।',
   },
   {
+    code: 'lottery_win', weight: 30,
+    patterns: [
+      /kbc.{0,30}(lottery|winner|won)/i, /(lottery|kbc).{0,30}(won|winner)/i,
+      /(won|winner).{0,30}(lottery|kbc)/i, /केबीसी.{0,20}(लॉटरी|विजेता)/i,
+    ],
+    labelEn: 'Fake KBC / lottery win claim',
+    labelHi: 'फर्जी KBC / लॉटरी जीतने का दावा',
+    detailEn: 'KBC never notifies winners by random SMS/WhatsApp. Real KBC winners are announced on TV and contacted officially — never asked to call a random number.',
+    detailHi: 'KBC रैंडम SMS/WhatsApp पर विजेताओं को सूचित नहीं करता। असली विजेताओं की घोषणा TV पर होती है — कभी रैंडम नंबर पर कॉल करने को नहीं कहा जाता।',
+  },
+  {
+    code: 'shortener_in_text', weight: 15,
+    patterns: [
+      /bit\.ly|tinyurl|t\.co|goo\.gl|rb\.gy|cutt\.ly|is\.gd|short\.link/i,
+    ],
+    labelEn: 'Shortened link hides destination',
+    labelHi: 'छोटा लिंक असली पता छिपा रहा है',
+    detailEn: 'URL shorteners hide where a link really goes — a favorite trick in parcel, KYC and prize scams. Ask the sender for the full link.',
+    detailHi: 'URL shortener असली पता छिपाते हैं — पार्सल, KYC और इनाम वाली ठगी में पसंदीदा चाल। भेजने वाले से पूरा लिंक माँगें।',
+  },
+  {
     code: 'link_present', weight: 8,
     patterns: [
       /https?:\/\/\S+/i, /www\.\S+\.\w+/i, /bit\.ly|tinyurl|t\.co|goo\.gl|rb\.gy|cutt\.ly/i,
