@@ -70,7 +70,7 @@ const RULES: Rule[] = [
     detailHi: 'असली OTP मैसेज हमेशा कोड साझा न करने की चेतावनी देते हैं। यह बैंकों और सेवाओं का मानक फॉर्मेट है।',
   },
   {
-    code: 'otp_secret', weight: 30,
+    code: 'otp_secret', weight: 35,
     patterns: [
       /\botp\b/i, /one[\s-]*time[\s-]*password/i, /ओटीपी/, /\bcvv\b/i, /upi\s*pin/i,
       /\bpin\b.*(share|bata|bhejo|bhej|enter|daal)/i,
@@ -229,7 +229,8 @@ const RULES: Rule[] = [
     patterns: [
       /legal\s*action/i, /case\s*(has\s*been|will\s*be)\s*filed/i,
       /sim\s*(will\s*be\s*)?(blocked|deactivat)/i, /electricity\s*(will\s*be\s*)?cut/i,
-      /पुलिस\s*केस/i, /कानूनी\s*कार्रवाई/i,
+      /account\s*(has\s*been\s*)?(blocked|suspended|deactivat|locked|frozen)/i,
+      /पुलिस\s*केस/i, /कानूनी\s*कार्रवाई/i, /खाता\s*(बंद|ब्लॉक)/i,
     ],
     labelEn: 'Threatens legal / service action',
     labelHi: 'कानूनी कार्रवाई की धमकी',
