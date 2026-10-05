@@ -23,6 +23,7 @@ export interface TextAnalysis {
   score: number;
   riskLevel: RiskLevel;
   redFlags: RedFlag[];
+  trustSignals: RedFlag[];
   explanation: string;
   recommendedActions: string[];
   similarKnownScams: import('./similarity.js').SimilarScam[];
@@ -42,6 +43,8 @@ export interface PipelineStages {
 export interface Rule {
   code: string;
   weight: number;
+  /** 'red' = scam signal (shown as red flag), 'trust' = legitimacy signal (shown as trust signal, negative weight) */
+  kind?: 'red' | 'trust';
   patterns: RegExp[];
   labelEn: string;
   labelHi: string;
@@ -51,6 +54,21 @@ export interface Rule {
 
 // prettier-ignore
 const RULES: Rule[] = [
+  {
+    // TRUST SIGNAL: genuine OTP delivery messages always warn "do not share".
+    // Scammers asking for OTP never include this warning. Negative weight.
+    code: 'legit_otp', weight: -45, kind: 'trust',
+    patterns: [
+      /\botp\b.{0,60}(do not share|never share|do not disclose|keep (it |this )?confidential)/i,
+      /(do not share|never share|do not disclose).{0,60}\botp\b/i,
+      /ओटीपी.{0,40}(साझा न करें|किसी को न बताएं)/i,
+      /(साझा न करें|किसी को न बताएं).{0,40}ओटीपी/i,
+    ],
+    labelEn: 'Genuine OTP delivery format',
+    labelHi: 'असली OTP डिलीवरी फॉर्मेट',
+    detailEn: 'Real OTP messages always warn you NOT to share the code. This is the standard format used by banks and services.',
+    detailHi: 'असली OTP मैसेज हमेशा कोड साझा न करने की चेतावनी देते हैं। यह बैंकों और सेवाओं का मानक फॉर्मेट है।',
+  },
   {
     code: 'otp_secret', weight: 30,
     patterns: [
@@ -65,7 +83,7 @@ const RULES: Rule[] = [
     detailHi: 'कोई असली बैंक, UPI ऐप या सरकारी दफ्तर कभी OTP, UPI PIN या CVV नहीं माँगता। जो माँगे, वह लगभग पक्का ठग है।',
   },
   {
-    code: 'digital_arrest', weight: 30,
+    code: 'digital_arrest', weight: 45,
     patterns: [
       /digital\s*arrest/i, /arrest\s*warrant/i, /(you\s*will|will)\s*be\s*arrested/i,
       /गिरफ्तार/i, /वारंट/i, /डिजिटल\s*अरेस्ट/i, /cbi\s*(case|officer|enquiry)/i,
@@ -130,12 +148,27 @@ const RULES: Rule[] = [
     detailHi: 'जिस लॉटरी में हिस्सा ही नहीं लिया, वह जीत नहीं सकते। "इनाम पाने के लिए फीस दें" हमेशा ठगी है।',
   },
   {
-    code: 'job_fee', weight: 12,
+    code: 'advance_fee', weight: 35,
     patterns: [
-      /job\s*offer/i, /registration\s*fee/i, /pay.{0,40}(to\s*get|for).{0,20}(job|offer|interview)/i,
+      /(pay|deposit|transfer).{0,50}(registration|joining|processing|verification|activation)\s*(fee|charge)/i,
+      /(fee|deposit).{0,40}to\s*(get|receive|claim|unlock|start)/i,
+      /पैसे\s*जमा\s*कर.{0,20}(फीस|रजिस्ट्रेशन)/i,
+    ],
+    labelEn: 'Advance fee demanded upfront',
+    labelHi: 'पहले ही एडवांस फीस माँगी जा रही है',
+    detailEn: 'Demanding fees before giving a job, prize or loan is the classic advance-fee scam. Real employers and lotteries never ask for money upfront.',
+    detailHi: 'नौकरी, इनाम या लोन देने से पहले फीस माँगना क्लासिक एडवांस-फीस ठगी है। असली नियोक्ता और लॉटरी कभी पहले पैसे नहीं माँगते।',
+  },
+  {
+    code: 'job_fee', weight: 20,
+    patterns: [
+      /job\s*offer/i, /registration\s*fee/i, /(joining|training|verification)\s*fee/i,
+      /pay.{0,40}(to\s*get|for).{0,20}(job|offer|interview)/i,
+      /(pay|deposit).{0,30}(registration|joining)/i,
       /work\s*from\s*home.{0,40}(fee|deposit|investment|pay)/i,
       /नौकरी.{0,20}(फीस|पैसे)/i, /(selected|shortlisted).{0,40}(fee|pay)/i,
       /earn.{0,20}(per\s*day|\d+\s*(rs|₹|inr))/i,
+      /(fee|deposit).{0,30}(earn|\d+\s*(rs|₹))/i,
     ],
     labelEn: 'Job offer asking for fees',
     labelHi: 'नौकरी के नाम पर फीस माँग रहा है',
@@ -244,16 +277,25 @@ const ACTIONS: Record<RiskLevel, { en: string[]; hi: string[] }> = {
 
 /** Stage 1 — Extractor: find which rules match the text. */
 export function matchRules(rawText: string): Rule[] {
-  return RULES.filter((rule) => rule.patterns.some((re) => re.test(rawText)));
+  const matched = RULES.filter((rule) => rule.patterns.some((re) => re.test(rawText)));
+  // A message that ASKS for the OTP can never be a genuine OTP delivery,
+  // even if it parrots "do not share" to sound legitimate (scammers do this).
+  if (OTP_REQUEST.test(rawText)) {
+    return matched.filter((r) => r.code !== 'legit_otp');
+  }
+  return matched;
 }
+
+// Active solicitation of the OTP — disqualifies the legit_otp trust signal.
+const OTP_REQUEST = /(share|send|batao|bhejo|bhej\s*dijiye|बताएं|भेजें).{0,30}\botp\b/i;
 
 export function extractUrls(rawText: string): string[] {
   return [...rawText.matchAll(/https?:\/\/\S+|www\.\S+\.\w+/gi)].map((m) => m[0]);
 }
 
-/** Stage 2 — Scorer: weighted sum of matched rules, capped at 100. */
+/** Stage 2 — Scorer: weighted sum of matched rules, floored at 0, capped at 100. */
 export function scoreOf(matched: Rule[]): number {
-  return Math.min(100, matched.reduce((s, r) => s + r.weight, 0));
+  return Math.max(0, Math.min(100, matched.reduce((s, r) => s + r.weight, 0)));
 }
 
 export function riskOf(score: number): RiskLevel {
@@ -263,8 +305,21 @@ export function riskOf(score: number): RiskLevel {
 /** Stage 3 — Explainer: localized flags + plain-language explanation. */
 export function buildFlags(matched: Rule[], lang: Lang): RedFlag[] {
   return matched
+    .filter((r) => (r.kind ?? 'red') === 'red')
     .slice()
     .sort((a, b) => b.weight - a.weight)
+    .map((rule) => ({
+      code: rule.code,
+      label: lang === 'hi' ? rule.labelHi : rule.labelEn,
+      detail: lang === 'hi' ? rule.detailHi : rule.detailEn,
+      weight: rule.weight,
+    }));
+}
+
+/** Trust signals: legitimacy indicators (negative-weight rules), shown in green. */
+export function buildTrustSignals(matched: Rule[], lang: Lang): RedFlag[] {
+  return matched
+    .filter((r) => r.kind === 'trust')
     .map((rule) => ({
       code: rule.code,
       label: lang === 'hi' ? rule.labelHi : rule.labelEn,
@@ -288,11 +343,13 @@ export function analyzeText(rawText: string, lang: Lang = 'en'): TextAnalysis {
   const score = scoreOf(matched);
   const riskLevel = riskOf(score);
   const redFlags = buildFlags(matched, lang);
+  const trustSignals = buildTrustSignals(matched, lang);
 
   return {
     score,
     riskLevel,
     redFlags,
+    trustSignals,
     explanation: buildExplanation(riskLevel, lang),
     recommendedActions: buildActions(riskLevel, lang),
     similarKnownScams: [],

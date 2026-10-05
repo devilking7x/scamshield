@@ -13,6 +13,23 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '64kb' }));
 
+// Simple in-memory rate limiter: 60 requests/min per IP on API routes.
+const rateMap = new Map<string, { count: number; reset: number }>();
+app.use('/api/', (req, res, next) => {
+  const ip = req.ip ?? 'unknown';
+  const now = Date.now();
+  const entry = rateMap.get(ip);
+  if (!entry || now > entry.reset) {
+    rateMap.set(ip, { count: 1, reset: now + 60_000 });
+    return next();
+  }
+  entry.count += 1;
+  if (entry.count > 60) {
+    return res.status(429).json({ error: 'Too many requests — please slow down.' });
+  }
+  next();
+});
+
 function pickLang(v: unknown): Lang {
   return v === 'hi' ? 'hi' : 'en';
 }

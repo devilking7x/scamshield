@@ -450,6 +450,12 @@ export default function App() {
                 <div className="font-bold text-gold mb-2">🚩 {s.redFlags} ({textResult.redFlags.length})</div>
                 {textResult.redFlags.length ? <FlagList flags={textResult.redFlags} /> : <p className="text-stone-400 text-sm">{s.noFlags}</p>}
               </div>
+              {(textResult.trustSignals?.length ?? 0) > 0 && (
+                <div className="mt-4">
+                  <div className="font-bold text-green-400 mb-2">✅ {lang === 'hi' ? 'भरोसे के संकेत' : 'Trust signals'} ({textResult.trustSignals.length})</div>
+                  <FlagList flags={textResult.trustSignals} />
+                </div>
+              )}
               <SimilarList items={textResult.similarKnownScams} lang={lang} />
               <div className="mt-4">
                 <div className="font-bold text-gold mb-1">💡 {s.explanation}</div>

@@ -20,6 +20,7 @@ export interface TextResult {
   score: number;
   riskLevel: 'safe' | 'suspicious' | 'dangerous';
   redFlags: RedFlag[];
+  trustSignals: RedFlag[];
   explanation: string;
   recommendedActions: string[];
   similarKnownScams: SimilarScam[];

@@ -45,6 +45,8 @@ const SUSPICIOUS_TLDS = new Set([
   'tk', 'ml', 'ga', 'cf', 'gq', 'xyz', 'top', 'click', 'buzz', 'country',
   'stream', 'download', 'review', 'work', 'rest', 'link', 'zip', 'mov',
 ]);
+// Free Freenom TLDs — extremely abused by phishers, deserve a higher weight.
+const HIGH_RISK_TLDS = new Set(['tk', 'ml', 'ga', 'cf', 'gq']);
 
 const IP_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
 
@@ -101,12 +103,28 @@ const CHECKS: Check[] = [
     detailHi: 'छोटे लिंक असली पता छिपाते हैं। क्लिक करने से पहले लिंक को expand करें या पूरा URL माँगें।',
   },
   {
-    code: 'suspicious_tld', weight: 10,
-    test: (u, host, labels) => SUSPICIOUS_TLDS.has(labels[labels.length - 1] || ''),
-    labelEn: 'Suspicious top-level domain',
-    labelHi: 'संदिग्ध टॉप-लेवल डोमेन',
-    detailEn: 'This domain extension is free/cheap and heavily abused by scammers. Real Indian banks use .co.in or .com.',
-    detailHi: 'यह डोमेन एक्सटेंशन मुफ्त/सस्ता है और ठग इसका खूब दुरुपयोग करते हैं। असली भारतीय बैंक .co.in या .com इस्तेमाल करते हैं।',
+    code: 'suspicious_tld', weight: 20,
+    test: (u, host, labels) => {
+      const tld = labels[labels.length - 1] || '';
+      if (HIGH_RISK_TLDS.has(tld)) return true;
+      // lower weight for other cheap TLDs — handled via combo bonus instead
+      return false;
+    },
+    labelEn: 'High-risk free top-level domain (.tk/.ml/.ga/.cf/.gq)',
+    labelHi: 'जोखिम भरा मुफ्त टॉप-लेवल डोमेन (.tk/.ml/.ga/.cf/.gq)',
+    detailEn: 'This free domain extension is extremely abused by scammers. Real Indian banks use .co.in or .com — never these.',
+    detailHi: 'यह मुफ्त डोमेन एक्सटेंशन ठगों द्वारा बहुत ज़्यादा दुरुपयोग किया जाता है। असली भारतीय बैंक .co.in या .com इस्तेमाल करते हैं — ये कभी नहीं।',
+  },
+  {
+    code: 'cheap_tld', weight: 8,
+    test: (u, host, labels) => {
+      const tld = labels[labels.length - 1] || '';
+      return SUSPICIOUS_TLDS.has(tld) && !HIGH_RISK_TLDS.has(tld);
+    },
+    labelEn: 'Cheap / unusual top-level domain',
+    labelHi: 'सस्ता / असामान्य टॉप-लेवल डोमेन',
+    detailEn: 'Unusual cheap domain extensions (.xyz, .top, .click...) are often used for throwaway scam sites.',
+    detailHi: 'असामान्य सस्ते डोमेन एक्सटेंशन (.xyz, .top, .click...) अक्सर फेंकने वाली ठगी साइटों के लिए इस्तेमाल होते हैं।',
   },
   {
     code: 'typosquat', weight: 25,
@@ -124,7 +142,7 @@ const CHECKS: Check[] = [
     detailHi: 'डोमेन किसी मशहूर ब्रांड से सिर्फ एक-दो अक्षर अलग है (जैसे "sb1" बनाम "sbi") — जल्दी पढ़ने वालों को धोखा देने की पुरानी चाल।',
   },
   {
-    code: 'brand_embed', weight: 15,
+    code: 'brand_embed', weight: 20,
     test: (u, host, labels) => {
       const realDomains = [
         'sbi.co.in', 'hdfcbank.com', 'icicibank.com', 'axisbank.com', 'kotak.com',
@@ -218,6 +236,19 @@ export function analyzeUrl(raw: string, lang: Lang = 'en'): UrlVerdict {
 
   score = Math.min(100, score);
   reasons.sort((a, b) => b.weight - a.weight);
+  // Combo bonus: multiple independent phishing signals = much more dangerous.
+  if (reasons.length >= 3) {
+    score = Math.min(100, score + 15);
+    reasons.push({
+      code: 'combo',
+      label: lang === 'hi' ? 'कई स्वतंत्र फिशिंग संकेत एक साथ' : 'Multiple independent phishing signals combined',
+      detail: lang === 'hi'
+        ? 'तीन या ज़्यादा अलग-अलग चेतावनी संकेत एक साथ मिलना लगभग पक्का फिशिंग है।'
+        : 'Three or more independent warning signals together is almost certainly phishing.',
+      weight: 15,
+    });
+    reasons.sort((a, b) => b.weight - a.weight);
+  }
   const verdict: Verdict = score >= 60 ? 'dangerous' : score >= 30 ? 'suspicious' : 'safe';
 
   return {

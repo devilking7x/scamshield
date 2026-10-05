@@ -151,6 +151,38 @@ try {
   ok('debug: extractor lists matched codes',
     Array.isArray(st?.extractor?.matchedCodes) && st.extractor.matchedCodes.includes('otp_secret'));
 
+
+  // 18. JUDGE FIX: genuine OTP delivery (do-not-share) -> safe + trust signal
+  r = await post('/api/analyze-text', {
+    text: 'Your OTP for HDFC Bank transaction of Rs 1500 is 482913. Do not share with anyone.',
+    lang: 'en',
+  });
+  ok('legit OTP: safe (no false positive)', r.json.riskLevel === 'safe', `score=${r.json.score} level=${r.json.riskLevel}`);
+  ok('legit OTP: trust signal present', (r.json.trustSignals || []).some(t => t.code === 'legit_otp'));
+
+  // 19. JUDGE FIX: job fee scam -> dangerous (was false negative)
+  r = await post('/api/analyze-text', {
+    text: 'Congratulations! Selected for work from home job. Pay Rs 2500 registration fee to start earning 50000/month.',
+    lang: 'en',
+  });
+  ok('job fee scam: dangerous', r.json.riskLevel === 'dangerous', `score=${r.json.score} level=${r.json.riskLevel}`);
+
+  // 20. JUDGE FIX: digital arrest -> dangerous
+  r = await post('/api/analyze-text', {
+    text: 'This is CBI officer Sharma. You are under digital arrest for money laundering. Pay 50000 to avoid jail.',
+    lang: 'en',
+  });
+  ok('digital arrest: dangerous', r.json.riskLevel === 'dangerous', `score=${r.json.score} level=${r.json.riskLevel}`);
+
+  // 21. JUDGE FIX: phishing URL with combo -> dangerous
+  r = await post('/api/analyze-url', { url: 'http://secure-verify-paytm.tk/login' });
+  ok('phishing URL combo: dangerous', r.json.verdict === 'dangerous', `score=${r.json.score} verdict=${r.json.verdict}`);
+  ok('phishing URL: combo reason present', (r.json.reasons || []).some(x => x.code === 'combo'));
+
+  // 22. legit URL still safe
+  r = await post('/api/analyze-url', { url: 'https://www.hdfcbank.com' });
+  ok('legit URL: still safe', r.json.verdict === 'safe', `score=${r.json.score}`);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exitCode = fail ? 1 : 0;
 } finally {

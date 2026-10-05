@@ -18,6 +18,7 @@ import {
   buildActions,
   buildExplanation,
   buildFlags,
+  buildTrustSignals,
   extractUrls,
   matchRules,
   riskOf,
@@ -51,8 +52,9 @@ export function runTextPipeline(
 
   // Stage 3 — Explainer
   const redFlags = buildFlags(matched, lang);
+  const trustSignals = buildTrustSignals(matched, lang);
   const explanation = buildExplanation(riskLevel, lang);
-  log('explainer', { flags: redFlags.length });
+  log('explainer', { flags: redFlags.length, trust: trustSignals.length });
 
   // Stage 4 — Advisor
   const recommendedActions = buildActions(riskLevel, lang);
@@ -63,6 +65,7 @@ export function runTextPipeline(
     score,
     riskLevel,
     redFlags,
+    trustSignals,
     explanation,
     recommendedActions,
     similarKnownScams,
